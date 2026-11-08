@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIDA ANG MASUSTANSIYA - Scene 1</title>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') !== 'index') {
+      window.location.replace('index.html');
+    }
+    if (params.has('video')) {
+      document.documentElement.classList.add('video-route', 'video-loading');
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top left, rgba(255, 210, 95, 0.12), transparent 22%),
+        linear-gradient(180deg, #06080f 0%, #0c1320 100%);
+      color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .video-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: flex-start;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(12px);
+      padding: 0; /* fill the viewport */
+      overflow: hidden;
+    }
+
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .fullscreen-stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .video-container:-webkit-full-screen,
+    .video-container:fullscreen {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .video-container:-webkit-full-screen .player-wrapper,
+    .video-container:fullscreen .player-wrapper {
+      width: 100%;
+      height: 100%;
+    }
+
+    .video-container:-webkit-full-screen .fullscreen-stage,
+    .video-container:fullscreen .fullscreen-stage {
+      width: 100%;
+      height: 100%;
+    }
+
+    .video-container:-webkit-full-screen .back-button,
+    .video-container:fullscreen .back-button {
+      z-index: 10001;
+    }
+
+    .fullscreen-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 10002;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.68);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .fullscreen-button:hover {
+      background: rgba(0, 0, 0, 0.88);
+    }
+
+    .fullscreen-button svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: square;
+      stroke-linejoin: miter;
+      stroke-width: 2.5;
+    }
+
+    .fullscreen-button .exit-fullscreen-icon {
+      display: none;
+    }
+
+    .fullscreen-button[aria-pressed="true"] .enter-fullscreen-icon {
+      display: none;
+    }
+
+    .fullscreen-button[aria-pressed="true"] .exit-fullscreen-icon {
+      display: block;
+    }
+
+    video:-webkit-full-screen,
+    video:fullscreen {
+      width: 100%;
+      height: 100%;
+    }
+
+    video::-webkit-media-controls-fullscreen-button {
+      display: none !important;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #ffffff;
+      font-size: 36px;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      text-transform: uppercase;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 0;
+      background: #000;
+      box-shadow: none;
+      border: none;
+      outline: none;
+      transition: opacity 360ms ease;
+      opacity: 1;
+    }
+    video.fading { opacity: 0; }
+
+    .video-route body {
+      background: url("images/thumbnail.png") center center / cover no-repeat;
+    }
+
+    .video-route .video-container {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .video-loading video {
+      opacity: 0;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      background: #f8e9a1;
+      padding: 0;
+      text-align: center;
+      border-radius: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(18px);
+      transition: opacity 360ms ease, transform 360ms ease, visibility 0ms linear 360ms, background-color 360ms ease;
+      z-index: 9999;
+      min-width: 0;
+    }
+
+    .overlay-background,
+    .overlay-background-next {
+      position: absolute;
+      inset: 0;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      pointer-events: none;
+    }
+
+    .overlay-background {
+      z-index: 0;
+    }
+
+    .overlay-background-next {
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 360ms ease;
+    }
+
+    .overlay.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+      transition-delay: 0s;
+    }
+
+    .overlay.fading-out {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10000;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 8px;
+      background: #5a5338;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .back-button:hover {
+      background: #49432e;
+    }
+
+    .back-button svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: square;
+      stroke-linejoin: miter;
+      stroke-width: 2.5;
+    }
+
+    .back-button:focus-visible {
+      outline: 3px solid #f7d46b;
+      outline-offset: 3px;
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .choice-button {
+      justify-self: center;
+      width: min(74%, 300px);
+      min-width: 0;
+      padding: 12px 18px;
+      font-size: clamp(0.8rem, 1.2vw, 1rem);
+      font-weight: 600;
+      border: 2px solid #80643b;
+      border-radius: 999px;
+      cursor: pointer;
+      background: #D5BD79;
+      color: #17130c;
+      transition: transform 0.24s ease, background-color 0.24s ease, box-shadow 0.24s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      box-shadow: 0 4px 10px rgba(47, 36, 16, 0.28);
+      position: relative;
+      overflow: hidden;
+    }
+    .choice-button:hover {
+      transform: translateY(-2px);
+      background: #D5BD79;
+      box-shadow: 0 6px 14px rgba(47, 36, 16, 0.34);
+    }
+
+    .choice-button:active {
+      transform: translateY(-2px);
+    }
+
+    .button-row {
+      position: absolute;
+      left: 0;
+      bottom: 6%;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      justify-content: center;
+      width: 100%;
+      gap: 0;
+    }
+
+    .choice-button.snack-choice {
+      justify-self: center;
+      width: min(74%, 300px);
+      padding: 12px 18px;
+      border-radius: 999px;
+      text-align: center;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .snack-choice ul {
+      margin: 12px 0 0 20px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px), (min-width: 641px) and (max-width: 900px) and (max-height: 500px) {
+      body {
+        display: block;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      .video-container {
+        width: 100vw;
+        height: max(100dvh, 168.75vw);
+        min-height: 100dvh;
+        gap: 0;
+        overflow: visible;
+      }
+
+      .video-container > h1 {
+        display: none;
+      }
+
+      .player-wrapper {
+        position: absolute !important;
+        inset: 0 0 auto;
+        flex: none;
+        height: 100dvh !important;
+      }
+
+      video {
+        object-fit: contain;
+      }
+
+      .overlay {
+        inset: 0 auto auto 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .overlay-background,
+      .overlay-background-next {
+        inset: auto;
+        top: 0;
+        left: 10%;
+        width: 80%;
+        height: 50%;
+        background-size: 200% 98%;
+        background-position: left top;
+      }
+
+      .overlay-background::after,
+      .overlay-background-next::after {
+        position: absolute;
+        inset: 100% 0 auto;
+        width: 100%;
+        height: 100%;
+        background-image: inherit;
+        background-repeat: no-repeat;
+        background-position: right top;
+        background-size: 200% 90%;
+        content: "";
+      }
+
+      .back-button {
+        top: max(12px, env(safe-area-inset-top));
+        left: max(12px, env(safe-area-inset-left));
+      }
+
+      .fullscreen-button {
+        top: max(12px, env(safe-area-inset-top));
+        right: max(12px, env(safe-area-inset-right));
+      }
+
+      .button-row {
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        gap: 0;
+        padding: 0 10% max(44px, env(safe-area-inset-bottom));
+      }
+
+      .button-row .choice-button {
+        width: 100%;
+        min-height: 48px;
+        padding: 12px 16px;
+        font-size: clamp(0.875rem, 3.5vw, 1rem);
+        justify-self: stretch;
+        align-self: end;
+        margin-bottom: 0;
+        top: 18px;
+      }
+
+      .video-container.mobile-landscape-fullscreen {
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .video-container.mobile-landscape-fullscreen .fullscreen-stage {
+        width: 100%;
+        height: 100%;
+      }
+
+      .video-container.mobile-landscape-fullscreen .player-wrapper {
+        inset: 0;
+        height: 100% !important;
+      }
+
+      .video-container.mobile-landscape-fullscreen .overlay {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .video-container.mobile-landscape-fullscreen .overlay-background,
+      .video-container.mobile-landscape-fullscreen .overlay-background-next {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+      }
+
+      .video-container.mobile-landscape-fullscreen .overlay-background::after,
+      .video-container.mobile-landscape-fullscreen .overlay-background-next::after {
+        display: none;
+      }
+
+      .video-container.mobile-landscape-fullscreen .button-row {
+        top: auto;
+        bottom: max(24px, env(safe-area-inset-bottom));
+        height: auto;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
+        gap: 12px;
+        padding: 0 16px;
+      }
+
+      .video-container.mobile-landscape-fullscreen .button-row .choice-button {
+        width: min(100%, 300px);
+        justify-self: center;
+        top: 0;
+      }
+    }
+
+    @media (max-width: 640px) and (orientation: portrait) {
+      .video-container.mobile-landscape-fullscreen .fullscreen-stage {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100dvh;
+        height: 100dvw;
+        transform: translate(-50%, -50%) rotate(90deg);
+        transform-origin: center;
+      }
+
+      html.mobile-css-fullscreen,
+      html.mobile-css-fullscreen body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      html.mobile-css-fullscreen body {
+        position: fixed;
+        inset: 0;
+      }
+
+      .video-container.mobile-landscape-fullscreen {
+        width: 100vw;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .video-container.mobile-landscape-fullscreen .fullscreen-stage {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100dvh;
+        height: 100dvw;
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .overlay-background,
+      .overlay-background-next {
+        background-size: 200% 90%;
+      }
+
+      .overlay-background::after,
+      .overlay-background-next::after {
+        background-size: 200% 82%;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <div class="fullscreen-stage">
+    <button id="backButton" class="back-button" type="button" aria-label="Go back to the previous scene">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+      </svg>
+    </button>
+    <button id="fullscreenButton" class="fullscreen-button" type="button" aria-label="Enter fullscreen" aria-pressed="false" title="Enter fullscreen">
+      <svg class="enter-fullscreen-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M4 15v5h5" />
+      </svg>
+      <svg class="exit-fullscreen-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9h5V4M20 9h-5V4M15 20v-5h5M9 20v-5H4" />
+      </svg>
+    </button>
+    <h1></h1>
+    <div class="player-wrapper" style="position:relative; width:100%;">
+      <video id="sceneVideo" controls controlsList="nodownload noplaybackrate nofullscreen" disablePictureInPicture>
+        <source id="sceneSource" src="videos/intro.mp4" type="video/mp4" />
+      </video>
+    </div>
+
+    <div id="choiceOverlay" class="overlay">
+      <div id="overlayBackground" class="overlay-background"></div>
+      <div id="overlayBackgroundNext" class="overlay-background-next"></div>
+      <div id="overlayButtons" class="button-row">
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('sceneVideo');
+    const source = document.getElementById('sceneSource');
+    const overlay = document.getElementById('choiceOverlay');
+    const overlayBackground = document.getElementById('overlayBackground');
+    const overlayBackgroundNext = document.getElementById('overlayBackgroundNext');
+    const overlayButtons = document.getElementById('overlayButtons');
+    const backButton = document.getElementById('backButton');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+
+    const choicesByVideo = {
+      'intro.mp4': [
+        { label: 'Proper Breakfast', file: '2breakfast.mp4' },
+        { label: 'Quick Snack', file: '2quicksnack.mp4' }
+      ],
+      '3ifbreakfast.mp4': [
+        { label: 'Healthy Snack', file: '4ifsandwichbf.mp4' },
+        { label: 'Unhealthy Snack', file: '4ifdonutbf.mp4' }
+      ],
+      '3ifquick snack.mp4': [
+        { label: 'Healthy Snack', file: '4ifsandwichqs.mp4' },
+        { label: 'Unhealthy Snack', file: '4ifdonutqs.mp4' }
+      ],
+      '4ifsandwichbf.mp4': [
+        { label: 'Balanced Meal', file: '5balancedmeal.mp4' },
+        { label: 'Oily Meal', file: '5unbalanced meal.mp4' }
+      ],
+      '4ifdonutbf.mp4': [
+        { label: 'Balanced Meal', file: '5balancedmeal.mp4' },
+        { label: 'Oily Meal', file: '5unbalanced meal.mp4' }
+      ],
+      '4ifsandwichqs.mp4': [
+        { label: 'Balanced Meal', file: '5balancedmeal.mp4' },
+        { label: 'Oily Meal', file: '5unbalanced meal.mp4' }
+      ],
+      '4ifdonutqs.mp4': [
+        { label: 'Balanced Meal', file: '5balancedmeal.mp4' },
+        { label: 'Oily Meal', file: '5unbalanced meal.mp4' }
+      ],
+      '5balancedmeal.mp4': [
+        { label: 'EAT A HOME-COOKED MEAL', file: '6homecooked.mp4' },
+        { label: 'EAT FAST FOOD', file: '6fastfood.mp4' }
+      ],
+      '5unbalanced meal.mp4': [
+        { label: 'EAT A HOME-COOKED MEAL', file: '6homecooked.mp4' },
+        { label: 'EAT FAST FOOD', file: '6fastfood.mp4' }
+      ],
+      'Teaser.mp4': []
+    };
+
+    const automaticNextVideo = {
+      '2breakfast.mp4': '3ifbreakfast.mp4',
+      '2quicksnack.mp4': '3ifquick snack.mp4'
+    };
+
+    function getBaseName(path) {
+      if (!path) return '';
+      try {
+        return decodeURIComponent(path.split('/').pop());
+      } catch (e) {
+        return path.split('/').pop();
+      }
+    }
+
+    const requestedVideo = params.get('video');
+    if (requestedVideo) {
+      source.src = requestedVideo.includes('/') ? requestedVideo : ('videos/' + requestedVideo);
+    }
+
+    let currentVideo = getBaseName(source.getAttribute('src') || decodeURIComponent(source.src.split('/').pop()));
+    let overlayShown = false;
+    let isTransitioning = false;
+    let overlayShowTimer;
+    let overlayHideTimer;
+    let overlayBackgroundTimer;
+    const sceneHistory = [];
+
+    const overlayBackgroundByVideo = {
+      'intro.mp4': 'url("images/1CBG.PNG")',
+      '3ifbreakfast.mp4': 'url("images/2CBG.PNG")',
+      '3ifquick snack.mp4': 'url("images/2CBG.PNG")',
+      '4ifsandwichbf.mp4': 'url("images/3CBG.PNG")',
+      '4ifdonutbf.mp4': 'url("images/3CBG.PNG")',
+      '4ifsandwichqs.mp4': 'url("images/3CBG.PNG")',
+      '4ifdonutqs.mp4': 'url("images/3CBG.PNG")',
+      '5balancedmeal.mp4': 'url("images/4CBG.PNG")',
+      '5unbalanced meal.mp4': 'url("images/4CBG.PNG")'
+    };
+
+    function renderChoicesFor(videoName) {
+      overlayButtons.innerHTML = '';
+      const choices = choicesByVideo[videoName] || [];
+      if (choices.length === 0) {
+        return;
+      }
+      choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = choice.items ? 'choice-button snack-choice' : 'choice-button simple';
+        if (choice.items) {
+          const label = document.createElement('strong');
+          label.textContent = choice.label;
+          btn.appendChild(label);
+
+          const list = document.createElement('ul');
+          choice.items.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.textContent = item;
+            list.appendChild(listItem);
+          });
+          btn.appendChild(list);
+        } else {
+          btn.textContent = choice.label;
+        }
+        btn.addEventListener('click', () => choosePath(choice.file));
+        overlayButtons.appendChild(btn);
+      });
+    }
+
+    const container = document.querySelector('.video-container');
+    let isTransferringFullscreen = false;
+
+    function getFullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || null;
+    }
+
+    function requestFullscreen(element) {
+      if (element.requestFullscreen) return element.requestFullscreen();
+      if (element.webkitRequestFullscreen) return element.webkitRequestFullscreen();
+      if (element.mozRequestFullScreen) return element.mozRequestFullScreen();
+      if (element.msRequestFullscreen) return element.msRequestFullscreen();
+      return Promise.reject(new Error('Fullscreen API not supported'));
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
+      if (document.msExitFullscreen) return document.msExitFullscreen();
+      return Promise.reject(new Error('Fullscreen API is not supported'));
+    }
+
+    function isMobileViewport() {
+      return matchMedia('(max-width: 640px), (min-width: 641px) and (max-width: 900px) and (max-height: 500px)').matches;
+    }
+
+    function canRequestFullscreen(element) {
+      return Boolean(
+        element.requestFullscreen ||
+        element.webkitRequestFullscreen ||
+        element.mozRequestFullScreen ||
+        element.msRequestFullscreen
+      );
+    }
+
+    async function lockMobileOrientation() {
+      if (!screen.orientation || typeof screen.orientation.lock !== 'function') {
+        return;
+      }
+
+      try {
+        await screen.orientation.lock('landscape');
+      } catch (error) {
+        console.warn('Landscape orientation lock is unavailable; using the mobile rotation layout instead.', error);
+      }
+    }
+
+    function unlockMobileOrientation() {
+      if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+        screen.orientation.unlock();
+      }
+    }
+
+    function updateFullscreenButton() {
+      const isFullscreen = getFullscreenElement() === container || isVideoFullscreen() ||
+        container.classList.contains('mobile-landscape-fullscreen');
+      fullscreenButton.setAttribute('aria-pressed', String(isFullscreen));
+      fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+      fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+    }
+
+    fullscreenButton.addEventListener('click', async () => {
+      try {
+        const isFullscreen = getFullscreenElement() === container || isVideoFullscreen() ||
+          container.classList.contains('mobile-landscape-fullscreen');
+        if (isFullscreen) {
+          if (getFullscreenElement()) {
+            await exitFullscreen();
+          }
+          container.classList.remove('mobile-landscape-fullscreen');
+          document.documentElement.classList.remove('mobile-css-fullscreen');
+          unlockMobileOrientation();
+          updateFullscreenButton();
+        } else {
+          const useMobileLayout = isMobileViewport();
+          if (!canRequestFullscreen(container) && useMobileLayout) {
+            container.classList.add('mobile-landscape-fullscreen');
+            document.documentElement.classList.add('mobile-css-fullscreen');
+            updateFullscreenButton();
+            return;
+          }
+
+          await requestFullscreen(container);
+          if (useMobileLayout) {
+            container.classList.add('mobile-landscape-fullscreen');
+            updateFullscreenButton();
+            await lockMobileOrientation();
+          }
+        }
+      } catch (error) {
+        console.error('Unable to toggle fullscreen:', error);
+      }
+    });
+
+    function isVideoFullscreen() {
+      const fsElement = getFullscreenElement();
+      return fsElement === video || video.webkitDisplayingFullscreen === true || video.mozFullScreen === true;
+    }
+
+    async function transferFullscreenToContainer() {
+      if (isTransferringFullscreen || !container) {
+        return;
+      }
+      const fullscreenElement = getFullscreenElement();
+      if (fullscreenElement !== video) {
+        return;
+      }
+      isTransferringFullscreen = true;
+      await new Promise(resolve => setTimeout(resolve, 120));
+      try {
+        if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        } else if (container.mozRequestFullScreen) {
+          container.mozRequestFullScreen();
+        } else if (container.msRequestFullscreen) {
+          container.msRequestFullscreen();
+        }
+      } catch (e) {
+        
+      } finally {
+        isTransferringFullscreen = false;
+      }
+    }
+
+    function handleFullscreenChange() {
+      if (!container) return;
+      const fsElement = getFullscreenElement();
+      updateFullscreenButton();
+      if (fsElement === video && !isTransferringFullscreen) {
+        transferFullscreenToContainer().catch(() => {});
+      }
+      if (!fsElement && !container.classList.contains('mobile-css-fullscreen')) {
+        container.classList.remove('mobile-landscape-fullscreen');
+        unlockMobileOrientation();
+        updateFullscreenButton();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    function setOverlayBackground(backgroundImage, crossfade = false) {
+      clearTimeout(overlayBackgroundTimer);
+      overlayBackgroundNext.style.transition = 'none';
+      overlayBackgroundNext.style.opacity = '0';
+      overlayBackgroundNext.style.backgroundImage = 'none';
+
+      if (!crossfade || !overlayShown) {
+        overlayBackground.style.backgroundImage = backgroundImage || 'none';
+        return;
+      }
+
+      overlayBackgroundNext.style.backgroundImage = backgroundImage || 'none';
+      overlayBackgroundNext.offsetWidth;
+      overlayBackgroundNext.style.transition = '';
+      requestAnimationFrame(() => {
+        overlayBackgroundNext.style.opacity = '1';
+      });
+
+      overlayBackgroundTimer = setTimeout(() => {
+        overlayBackground.style.backgroundImage = backgroundImage || 'none';
+        overlayBackgroundNext.style.transition = 'none';
+        overlayBackgroundNext.style.opacity = '0';
+        overlayBackgroundNext.style.backgroundImage = 'none';
+      }, 380);
+    }
+
+    function showOverlayIfNeeded() {
+      if (isTransitioning || overlayShown) {
+        return;
+      }
+
+      const choices = choicesByVideo[currentVideo] || [];
+      const backgroundImage = overlayBackgroundByVideo[currentVideo];
+
+      if (choices.length > 0 || backgroundImage) {
+        clearTimeout(overlayHideTimer);
+        renderChoicesFor(currentVideo);
+        overlay.style.display = 'flex';
+        setOverlayBackground(backgroundImage);
+        overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
+        overlay.classList.remove('fading-out');
+        overlay.classList.add('visible');
+        overlayShown = true;
+      }
+    }
+
+    function hideOverlay() {
+      clearTimeout(overlayShowTimer);
+      clearTimeout(overlayHideTimer);
+      overlay.classList.remove('visible');
+      overlay.classList.add('fading-out');
+      overlay.style.pointerEvents = 'none';
+      overlayHideTimer = setTimeout(() => {
+        if (!overlay.classList.contains('fading-out')) {
+          return;
+        }
+        overlay.style.visibility = 'hidden';
+        overlay.style.display = 'none';
+        setOverlayBackground('none');
+        overlayButtons.innerHTML = '';
+        overlay.classList.remove('fading-out');
+      }, 360);
+    }
+
+    video.addEventListener('loadedmetadata', () => {
+      overlayShown = false;
+      currentVideo = getBaseName(source.getAttribute('src') || decodeURIComponent(source.src.split('/').pop()));
+    });
+
+    video.addEventListener('ended', () => {
+      if (isTransitioning) {
+        return;
+      }
+
+      const nextVideo = automaticNextVideo[currentVideo];
+      if (nextVideo) {
+        clearTimeout(overlayShowTimer);
+        sceneHistory.push(currentVideo);
+        isTransitioning = true;
+        transitionToVideo(nextVideo).catch(error => {
+          console.error('Unable to play the next scene:', error);
+        });
+        return;
+      }
+
+      const endedVideo = currentVideo;
+      if (isVideoFullscreen()) {
+        transferFullscreenToContainer().then(() => {
+          overlayShowTimer = setTimeout(() => {
+            if (currentVideo === endedVideo) {
+              showOverlayIfNeeded();
+            }
+          }, 160);
+        });
+      } else {
+        overlayShowTimer = setTimeout(() => {
+          if (currentVideo === endedVideo) {
+            showOverlayIfNeeded();
+          }
+        }, 120);
+      }
+    });
+
+    function transitionToVideo(fileName) {
+      return new Promise((resolve, reject) => {
+        video.pause();
+        video.classList.toggle('fading', !getFullscreenElement());
+
+        setTimeout(() => {
+          currentVideo = fileName;
+          source.src = encodeURI('videos/' + fileName);
+          video.addEventListener('loadeddata', () => {
+            video.classList.remove('fading');
+            isTransitioning = false;
+            video.play().then(() => {
+              resolve();
+            }).catch(() => {
+              video.muted = true;
+              video.play().then(() => {
+                resolve();
+              }).catch(error => {
+                reject(error);
+              });
+            });
+          }, { once: true });
+          video.addEventListener('error', () => {
+            video.classList.remove('fading');
+            isTransitioning = false;
+            reject(new Error('Unable to load video: ' + fileName));
+          }, { once: true });
+          video.load();
+        }, 360);
+      });
+    }
+
+    async function choosePath(fileName) {
+      if (isTransitioning) {
+        return;
+      }
+
+      isTransitioning = true;
+      clearTimeout(overlayShowTimer);
+      sceneHistory.push(currentVideo);
+      hideOverlay();
+      overlayShown = false;
+      currentVideo = fileName;
+
+      const fsElement = getFullscreenElement();
+      try {
+        if (fsElement === video) {
+          await exitFullscreen();
+          await requestFullscreen(container);
+        }
+      } catch (e) {
+      }
+
+      transitionToVideo(fileName).catch(error => {
+        console.error('Unable to play the selected scene:', error);
+      });
+    }
+
+    backButton.addEventListener('click', () => {
+      if (currentVideo === '3ifbreakfast.mp4' || currentVideo === '3ifquick snack.mp4') {
+        if (isTransitioning) {
+          return;
+        }
+
+        isTransitioning = true;
+        clearTimeout(overlayShowTimer);
+        clearTimeout(overlayHideTimer);
+        video.pause();
+        sceneHistory.length = 0;
+        currentVideo = 'intro.mp4';
+        renderChoicesFor(currentVideo);
+        setOverlayBackground(overlayBackgroundByVideo[currentVideo], true);
+        overlayShown = true;
+        overlay.classList.remove('fading-out');
+        overlay.classList.add('visible');
+        overlay.style.display = 'flex';
+        overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
+        setTimeout(() => {
+          isTransitioning = false;
+        }, 380);
+        return;
+      }
+
+      const previousVideo = sceneHistory.pop();
+      if (!previousVideo) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      video.pause();
+      currentVideo = previousVideo;
+      source.src = encodeURI('videos/' + previousVideo);
+      video.load();
+      renderChoicesFor(currentVideo);
+      overlayShown = false;
+      const previousChoices = choicesByVideo[currentVideo] || [];
+      const previousBackground = overlayBackgroundByVideo[currentVideo];
+      if (previousChoices.length > 0 || previousBackground) {
+        showOverlayIfNeeded();
+      } else {
+        hideOverlay();
+      }
+    });
+
+    renderChoicesFor(currentVideo);
+
+    document.documentElement.style.background = 'transparent';
+    document.body.style.transition = 'opacity 320ms ease, transform 320ms ease';
+    document.body.style.opacity = '0';
+    requestAnimationFrame(() => { document.body.style.opacity = '1'; });
+
+    if (requestedVideo) {
+      video.classList.add('fading');
+      video.addEventListener('loadeddata', () => {
+        video.classList.remove('fading');
+        document.documentElement.classList.remove('video-loading');
+      }, { once: true });
+      video.load();
+    }
+
+    video.play().catch(() => {
+      video.muted = true;
+      video.play().catch(error => {
+        console.error('Unable to play the video:', error);
+      });
+    });
+  </script>
+</body>
+</html>

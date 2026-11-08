@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BIDA ANG MASUSTANSYA</title>
+<link rel="stylesheet" href="styles.css" />
+	<style>
+		.page-fade { transition: opacity 320ms ease, transform 320ms ease; }
+		.page-fade-exit { opacity: 0; transform: translateY(-6px); }
+	</style>
+</head>
+<body>
+<div class="page-shell page-fade">
+<header class="hero">
+<div class="hero-content">
+<h1>BIDA ANG MASUSTANSYA</h1>
+<p class="hero-subtitle">An interactive 2D educational animation for healthy eating awareness.</p>
+<div class="hero-actions">
+<a href="scene1st.html?from=index" class="btn btn-primary">Play Now</a>
+						<a href="scene1st.html?from=index&video=videos/Teaser.mp4" class="btn btn-secondary" data-transition>Watch Teaser</a>
+</div>
+</div>
+</header>
+</div>
+</body>
+<script>
+	document.addEventListener('click', (e) => {
+		const a = e.target.closest('a[data-transition]');
+		if (!a) return;
+		const href = a.getAttribute('href');
+		if (!href) return;
+		e.preventDefault();
+		const shell = document.querySelector('.page-shell');
+		if (shell) {
+			shell.classList.add('page-fade-exit');
+		}
+		setTimeout(() => { window.location.href = href; }, 320);
+	});
+
+</script>
+</html>
